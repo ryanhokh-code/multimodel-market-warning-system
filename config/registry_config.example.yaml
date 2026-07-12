@@ -1,0 +1,178 @@
+# registry_config.example.yaml
+# Example EWS registry: 3 model families x 4 markets = 12 cells.
+# In production this grows to K x N and is edited primarily by the
+# walk-forward optimizer job, not by hand -- treat manual edits as
+# overrides for e.g. deactivating a cell after a bad live period.
+
+models:
+  - model_id: lppls_v2
+    category: bubble_dynamics
+    class_path: ews.signals.lppls.LPPLSSignal
+    default_hyperparams:
+      window_days: 750
+      n_starts: 40          # multi-start nonlinear fit
+      damping_min: 0.5
+      damping_max: 1.0
+    recalibration_frequency: weekly
+    requires_min_history_days: 750
+    active: true
+
+  - model_id: modwt_confluence_v1
+    category: multiscale
+    class_path: ews.signals.wavelet.MODWTConfluenceSignal
+    default_hyperparams:
+      window_days: 512      # fixed causal-safe COI window
+      scales: [D1, D2, D3, D4, D5]
+      confluence_min_bands: 3
+    recalibration_frequency: monthly
+    requires_min_history_days: 512
+    active: true
+
+  - model_id: mfdfa_v1
+    category: multifractal
+    class_path: ews.signals.mfdfa.MFDFASignal
+    default_hyperparams:
+      q_range: [-5, 5]
+      scale_min: 16
+      scale_max: 256
+    recalibration_frequency: monthly
+    requires_min_history_days: 1000
+    active: true
+
+markets:
+  - market_id: SPX
+    display_name: "S&P 500"
+    asset_class: equity_index
+    region: US
+    data_source: bbg_spx_index
+    min_history_days: 750
+    active: true
+
+  - market_id: NKY
+    display_name: "Nikkei 225"
+    asset_class: equity_index
+    region: JP
+    data_source: bbg_nky_index
+    min_history_days: 750
+    active: true
+
+  - market_id: FACTOR_MOM_LS
+    display_name: "Barra Momentum Long-Short"
+    asset_class: factor_ls
+    region: null
+    data_source: internal_barra_ls_book
+    min_history_days: 750
+    active: true
+
+  - market_id: FACTOR_VALUE_LS
+    display_name: "Barra Value Long-Short"
+    asset_class: factor_ls
+    region: null
+    data_source: internal_barra_ls_book
+    min_history_days: 750
+    active: true
+
+# One entry per active (model_id, market_id) pair. `active: false` here
+# is how the periodic validity review prunes a cell without touching
+# the model or market definitions -- e.g. LPPLS not adding value on a
+# long-short factor book with no bubble dynamics.
+cells:
+  - model_id: lppls_v2
+    market_id: SPX
+    hyperparams: {window_days: 750, n_starts: 40, damping_min: 0.5, damping_max: 1.0}
+    last_calibration_date: 2026-07-06
+    last_validation_ic: 0.081
+    last_validation_ic_pvalue: 0.03
+    active: true
+
+  - model_id: lppls_v2
+    market_id: NKY
+    hyperparams: {window_days: 750, n_starts: 40, damping_min: 0.5, damping_max: 1.0}
+    last_calibration_date: 2026-07-06
+    last_validation_ic: 0.045
+    last_validation_ic_pvalue: 0.21
+    active: true
+
+  - model_id: lppls_v2
+    market_id: FACTOR_MOM_LS
+    hyperparams: {window_days: 750, n_starts: 40, damping_min: 0.5, damping_max: 1.0}
+    last_calibration_date: 2026-06-29
+    last_validation_ic: 0.012
+    last_validation_ic_pvalue: 0.71
+    active: false          # pruned: no significant bubble dynamics on this book
+    notes: "Deactivated 2026-07-06 validity review: IC not significant after FDR correction."
+
+  - model_id: lppls_v2
+    market_id: FACTOR_VALUE_LS
+    hyperparams: {window_days: 750, n_starts: 40, damping_min: 0.5, damping_max: 1.0}
+    last_calibration_date: 2026-06-29
+    last_validation_ic: 0.009
+    last_validation_ic_pvalue: 0.83
+    active: false
+    notes: "Deactivated 2026-07-06 validity review."
+
+  - model_id: modwt_confluence_v1
+    market_id: SPX
+    hyperparams: {window_days: 512, scales: [D1, D2, D3, D4, D5], confluence_min_bands: 3}
+    last_calibration_date: 2026-07-01
+    last_validation_ic: 0.063
+    last_validation_ic_pvalue: 0.04
+    active: true
+
+  - model_id: modwt_confluence_v1
+    market_id: NKY
+    hyperparams: {window_days: 512, scales: [D1, D2, D3, D4, D5], confluence_min_bands: 3}
+    last_calibration_date: 2026-07-01
+    last_validation_ic: 0.058
+    last_validation_ic_pvalue: 0.05
+    active: true
+
+  - model_id: modwt_confluence_v1
+    market_id: FACTOR_MOM_LS
+    hyperparams: {window_days: 512, scales: [D1, D2, D3, D4, D5], confluence_min_bands: 2}
+    last_calibration_date: 2026-07-01
+    last_validation_ic: 0.071
+    last_validation_ic_pvalue: 0.02
+    active: true
+
+  - model_id: modwt_confluence_v1
+    market_id: FACTOR_VALUE_LS
+    hyperparams: {window_days: 512, scales: [D1, D2, D3, D4, D5], confluence_min_bands: 2}
+    last_calibration_date: 2026-07-01
+    last_validation_ic: 0.039
+    last_validation_ic_pvalue: 0.18
+    active: true
+
+  - model_id: mfdfa_v1
+    market_id: SPX
+    hyperparams: {q_range: [-5, 5], scale_min: 16, scale_max: 256}
+    last_calibration_date: 2026-06-15
+    last_validation_ic: 0.028
+    last_validation_ic_pvalue: 0.29
+    active: true
+    notes: "Weak/sign-inconsistent OOS IC, consistent with MF-DFA as composite component only."
+
+  - model_id: mfdfa_v1
+    market_id: NKY
+    hyperparams: {q_range: [-5, 5], scale_min: 16, scale_max: 256}
+    last_calibration_date: 2026-06-15
+    last_validation_ic: 0.019
+    last_validation_ic_pvalue: 0.41
+    active: true
+
+  - model_id: mfdfa_v1
+    market_id: FACTOR_MOM_LS
+    hyperparams: {q_range: [-5, 5], scale_min: 16, scale_max: 256}
+    last_calibration_date: 2026-06-15
+    last_validation_ic: 0.033
+    last_validation_ic_pvalue: 0.22
+    active: true
+
+  - model_id: mfdfa_v1
+    market_id: FACTOR_VALUE_LS
+    hyperparams: {q_range: [-5, 5], scale_min: 16, scale_max: 256}
+    last_calibration_date: 2026-06-15
+    last_validation_ic: -0.014
+    last_validation_ic_pvalue: 0.64
+    active: false
+    notes: "Deactivated: sign-flipped IC vs prior quarter."
